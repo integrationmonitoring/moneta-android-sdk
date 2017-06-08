@@ -8,6 +8,7 @@ import android.webkit.WebViewClient;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.DecimalFormat;
 import java.util.Random;
 
 /**
@@ -57,6 +58,58 @@ public class MonetaSdk {
         WbView.setWebViewClient(new WebViewClient());
 
         WbView.loadUrl(queryString);
+    }
+
+    public void showPaymentFormAndSaveCard(String mntOrderId,
+                                           Double mntAmount,
+                                           String mntCurrency,
+                                           String mntPaymentSystem,
+                                           WebView WbView,
+                                           Context context,
+                                           String publicId,
+                                           String cardNumber,
+                                           String cardExpiration,
+                                           String cardCVV2)
+    {
+        MonetaSdkConfig sdkConfig = new MonetaSdkConfig();
+        sdkConfig.load(context);
+
+        String mntPaymentSystemAccountId = sdkConfig.get(mntPaymentSystem + "_accoundId");
+        String mntPaymentSystemUnitId    = sdkConfig.get(mntPaymentSystem + "_unitId");
+        String mntAcountId   = sdkConfig.get("monetasdk_account_id");
+        String mntAcountCode = sdkConfig.get("monetasdk_account_code");
+        String mntDemoMode   = sdkConfig.get("monetasdk_demo_mode");
+        String mntTestMode   = sdkConfig.get("monetasdk_test_mode");
+        String mntDemoUrl    = sdkConfig.get("monetasdk_demo_url");
+        String mntProdUrl    = sdkConfig.get("monetasdk_production_url");
+        String mntSCDLink    = sdkConfig.get("monetasdk_secure_card_data_link");
+
+        String mntAmountString = String.format("%.2f", mntAmount).replace(",", ".");
+        String mntFormUrl = (mntDemoMode.equals("1")) ? mntDemoUrl : mntProdUrl;
+        mntFormUrl = mntFormUrl + mntSCDLink;
+
+        String queryString = mntFormUrl + "?MNT_ID=" + mntAcountId + "&MNT_TRANSACTION_ID=" + mntOrderId + "&MNT_CURRENCY_CODE=" + mntCurrency
+                + "&MNT_AMOUNT=" + mntAmountString + "&followup=true&javascriptEnabled=true&payment_method=" + mntPaymentSystem
+                + "&paymentSystem.unitId=" + mntPaymentSystemUnitId + "&paymentSystem.limitIds=" + mntPaymentSystemUnitId
+                + "&paymentSystem.accountId=" + mntPaymentSystemAccountId + "&MNT_TEST_MODE=" + mntTestMode + "&publicId=" + publicId
+                + "&secure[CARDNUMBER]=" + cardNumber + "&secure[CARDEXPIRATION]=" + cardExpiration + "&secure[CARDCVV2]=" + cardCVV2;
+
+        if (!mntAcountCode.equals("")) {
+            queryString += "&MNT_SIGNATURE=" + md5(mntAcountId + mntOrderId + mntAmountString + mntCurrency + mntTestMode + mntAcountCode);
+        }
+
+        Log.e(TAG, "DBG_showPaymentFormAndSaveCard: " + queryString);
+
+        WbView.getSettings().setJavaScriptEnabled(true);
+        WbView.getSettings().setDisplayZoomControls(true);
+        WbView.getSettings().setLoadWithOverviewMode(true);
+        WbView.getSettings().setUseWideViewPort(true);
+        WbView.setInitialScale(50);
+        WbView.getSettings().setDefaultZoom(WebSettings.ZoomDensity.FAR);
+        WbView.setWebViewClient(new WebViewClient());
+
+        WbView.loadUrl(queryString);
+
     }
 
     public static final String md5(final String s) {
