@@ -8,24 +8,22 @@ import android.webkit.WebView;
 
 public class SdkMainActivity extends AppCompatActivity implements OnClickListener {
 
+    private MonetaSdk monetasdk;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sdk_main);
+        monetasdk = new MonetaSdk((WebView) findViewById(R.id.webView), this);
     }
 
     @Override
     public void onClick(View view) {
-        MonetaSdk monetasdk = new MonetaSdk();
-
         // payment form
         Double mntAmount = 12.00;
         String mntPaymentSystem = "plastic";
-        String mntOrderId = monetasdk.getOrderId();
-        String mntCurrency = "RUB";
+        String mntOrderId = MonetaSdk.getOrderId();
 
-        WebView myWebView = (WebView) findViewById(R.id.webView);
-        monetasdk.showPaymentFrom(mntOrderId, mntAmount, mntCurrency, mntPaymentSystem, myWebView, this);
-
+        monetasdk.showPaymentFrom(mntOrderId, mntAmount, MonetaSdk.Currency.RUB, mntPaymentSystem);
     }
 }

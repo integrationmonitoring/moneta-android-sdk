@@ -8,111 +8,71 @@ import android.webkit.WebViewClient;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.text.DecimalFormat;
+import java.util.Locale;
 import java.util.Random;
 
 /**
  * Created by dmo on 13.04.2016.
  */
 public class MonetaSdk {
+    private static final String TAG = "Response";
 
-    String TAG = "Response";
+    private final WebView webView;
+    private final String mntAcountId;
+    private final String mntAcountCode;
+    private final String mntTestMode;
+    private final MonetaSdkConfig sdkConfig;
+    private final String mntUrl;
 
-    public void showPaymentFrom(String mntOrderId, Double mntAmount, String mntCurrency, String mntPaymentSystem, WebView WbView, Context context) {
-
-        MonetaSdkConfig sdkConfig = new MonetaSdkConfig();
+    /**
+     * @param webView WebView для отображения страницы
+     * @param context контекст приложения
+     */
+    public MonetaSdk(WebView webView, Context context) {
+        this.webView = webView;
+        sdkConfig = new MonetaSdkConfig();
         sdkConfig.load(context);
 
-        String mntPaymentSystemAccountId = sdkConfig.get(mntPaymentSystem + "_accountId");
-        String mntPaymentSystemUnitId    = sdkConfig.get(mntPaymentSystem + "_unitId");
-        String mntAcountId   = sdkConfig.get("monetasdk_account_id");
-        String mntAcountCode = sdkConfig.get("monetasdk_account_code");
-        String mntDemoMode   = sdkConfig.get("monetasdk_demo_mode");
-        String mntTestMode   = sdkConfig.get("monetasdk_test_mode");
-        String mntDemoUrl    = sdkConfig.get("monetasdk_demo_url");
-        String mntProdUrl    = sdkConfig.get("monetasdk_production_url");
-        String mntWidgLink   = sdkConfig.get("monetasdk_assistant_widget_link");
+        mntAcountId = sdkConfig.get("monetasdk_account_id");
+        mntAcountCode = sdkConfig.get("monetasdk_account_code");
+        mntTestMode = sdkConfig.get("monetasdk_test_mode");
 
-        String mntAmountString = String.format("%.2f", mntAmount).replace(",", ".");
-        String mntWidgUrl = (mntDemoMode.equals("1")) ? mntDemoUrl : mntProdUrl;
-        mntWidgUrl = mntWidgUrl + mntWidgLink;
 
-        String queryString = mntWidgUrl + "?MNT_ID=" + mntAcountId + "&MNT_TRANSACTION_ID=" + mntOrderId + "&MNT_CURRENCY_CODE=" + mntCurrency
-                            + "&MNT_AMOUNT=" + mntAmountString + "&followup=true&javascriptEnabled=true&payment_method=" + mntPaymentSystem
-                            + "&paymentSystem.unitId=" + mntPaymentSystemUnitId + "&paymentSystem.limitIds=" + mntPaymentSystemUnitId
-                            + "&paymentSystem.accountId=" + mntPaymentSystemAccountId + "&MNT_TEST_MODE=" + mntTestMode;
-
-        if (!mntAcountCode.equals("")) {
-            queryString = queryString + "&MNT_SIGNATURE=" + md5(mntAcountId + mntOrderId + mntAmountString + mntCurrency + mntTestMode + mntAcountCode);
+        if (sdkConfig.get("monetasdk_demo_mode").equals("1")) {
+            mntUrl = sdkConfig.get("monetasdk_demo_url");
+        } else {
+            mntUrl = sdkConfig.get("monetasdk_production_url");
         }
 
-        // queryString
-        Log.e(TAG, "DBG_showPaymentFrom: " + queryString);
-
-        WbView.getSettings().setJavaScriptEnabled(true);
-        WbView.getSettings().setDisplayZoomControls(true);
-        WbView.getSettings().setLoadWithOverviewMode(true);
-        WbView.getSettings().setUseWideViewPort(true);
-        WbView.setInitialScale(50);
-        WbView.getSettings().setDefaultZoom(WebSettings.ZoomDensity.FAR);
-        WbView.setWebViewClient(new WebViewClient());
-
-        WbView.loadUrl(queryString);
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().setDisplayZoomControls(true);
+        webView.getSettings().setLoadWithOverviewMode(true);
+        webView.getSettings().setUseWideViewPort(true);
+        webView.setInitialScale(50);
+        webView.getSettings().setDefaultZoom(WebSettings.ZoomDensity.FAR);
+        webView.setWebViewClient(new WebViewClient());
     }
 
-    public void showPaymentFormAndSaveCard(String mntOrderId,
-                                           Double mntAmount,
-                                           String mntCurrency,
-                                           String mntPaymentSystem,
-                                           WebView WbView,
-                                           Context context,
-                                           String publicId,
-                                           String cardNumber,
-                                           String cardExpiration,
-                                           String cardCVV2)
-    {
-        MonetaSdkConfig sdkConfig = new MonetaSdkConfig();
-        sdkConfig.load(context);
+    /**
+     * Вспомогательная функция для создания случайного номера заказа
+     *
+     * @return строковое представление сгенерированного случайного номера
+     */
+    public static String getOrderId() {
+        Long tsLong = System.currentTimeMillis();
+        Random r = new Random();
+        int rnd = r.nextInt(99 - 10 + 1) + 10;
 
-        String mntPaymentSystemAccountId = sdkConfig.get(mntPaymentSystem + "_accoundId");
-        String mntPaymentSystemUnitId    = sdkConfig.get(mntPaymentSystem + "_unitId");
-        String mntAcountId   = sdkConfig.get("monetasdk_account_id");
-        String mntAcountCode = sdkConfig.get("monetasdk_account_code");
-        String mntDemoMode   = sdkConfig.get("monetasdk_demo_mode");
-        String mntTestMode   = sdkConfig.get("monetasdk_test_mode");
-        String mntDemoUrl    = sdkConfig.get("monetasdk_demo_url");
-        String mntProdUrl    = sdkConfig.get("monetasdk_production_url");
-        String mntSCDLink    = sdkConfig.get("monetasdk_secure_card_data_link");
-
-        String mntAmountString = String.format("%.2f", mntAmount).replace(",", ".");
-        String mntFormUrl = (mntDemoMode.equals("1")) ? mntDemoUrl : mntProdUrl;
-        mntFormUrl = mntFormUrl + mntSCDLink;
-
-        String queryString = mntFormUrl + "?MNT_ID=" + mntAcountId + "&MNT_TRANSACTION_ID=" + mntOrderId + "&MNT_CURRENCY_CODE=" + mntCurrency
-                + "&MNT_AMOUNT=" + mntAmountString + "&followup=true&javascriptEnabled=true&payment_method=" + mntPaymentSystem
-                + "&paymentSystem.unitId=" + mntPaymentSystemUnitId + "&paymentSystem.limitIds=" + mntPaymentSystemUnitId
-                + "&paymentSystem.accountId=" + mntPaymentSystemAccountId + "&MNT_TEST_MODE=" + mntTestMode + "&publicId=" + publicId
-                + "&secure[CARDNUMBER]=" + cardNumber + "&secure[CARDEXPIRATION]=" + cardExpiration + "&secure[CARDCVV2]=" + cardCVV2;
-
-        if (!mntAcountCode.equals("")) {
-            queryString += "&MNT_SIGNATURE=" + md5(mntAcountId + mntOrderId + mntAmountString + mntCurrency + mntTestMode + mntAcountCode);
-        }
-
-        Log.e(TAG, "DBG_showPaymentFormAndSaveCard: " + queryString);
-
-        WbView.getSettings().setJavaScriptEnabled(true);
-        WbView.getSettings().setDisplayZoomControls(true);
-        WbView.getSettings().setLoadWithOverviewMode(true);
-        WbView.getSettings().setUseWideViewPort(true);
-        WbView.setInitialScale(50);
-        WbView.getSettings().setDefaultZoom(WebSettings.ZoomDensity.FAR);
-        WbView.setWebViewClient(new WebViewClient());
-
-        WbView.loadUrl(queryString);
-
+        return tsLong.toString() + Integer.toString(rnd);
     }
 
-    public static final String md5(final String s) {
+    /**
+     * Генерирует строковое представление хэша MD5
+     *
+     * @param s строка для подсчета хэша
+     * @return строковое представление хэша
+     */
+    private String md5(final String s) {
         final String MD5 = "MD5";
         String result = "";
         try {
@@ -123,11 +83,7 @@ public class MonetaSdk {
             // Create Hex String
             StringBuilder hexString = new StringBuilder();
             for (byte aMessageDigest : messageDigest) {
-                String h = Integer.toHexString(0xFF & aMessageDigest);
-                while (h.length() < 2) {
-                    h = "0" + h;
-                }
-                hexString.append(h);
+                hexString.append(String.format("%02X", 0xFF & aMessageDigest));
             }
             result = hexString.toString();
         } catch (NoSuchAlgorithmException e) {
@@ -137,25 +93,116 @@ public class MonetaSdk {
         return result;
     }
 
-    public String getOrderId() {
-        Long tsLong = System.currentTimeMillis();
-        String ts = tsLong.toString() + this.getRandom(10, 99);
-        return ts;
+    /**
+     * Открывает страницу оплаты
+     *
+     * @param mntOrderId       Идентификатор, по которому магазин сможет понять, что это данные именно этого заказа
+     * @param mntAmount        Сумма оплаты
+     * @param mntCurrency      Валюта платежа
+     * @param mntPaymentSystem Платежная система
+     */
+    public void showPaymentFrom(String mntOrderId, Double mntAmount, Currency mntCurrency, String mntPaymentSystem) {
+        String mntPaymentSystemAccountId = sdkConfig.get(mntPaymentSystem + "_accountId");
+        String mntPaymentSystemUnitId = sdkConfig.get(mntPaymentSystem + "_unitId");
+        String mntWidgLink = sdkConfig.get("monetasdk_assistant_widget_link");
+
+        String mntAmountString = String.format(Locale.ROOT, "%.2f", mntAmount);
+
+        String queryString = mntUrl + mntWidgLink +
+                "?MNT_ID=" + mntAcountId +
+                "&MNT_TRANSACTION_ID=" + mntOrderId +
+                "&MNT_CURRENCY_CODE=" + mntCurrency.toString() +
+                "&MNT_AMOUNT=" + mntAmountString +
+                "&followup=true&javascriptEnabled=true&payment_method=" + mntPaymentSystem +
+                "&paymentSystem.unitId=" + mntPaymentSystemUnitId +
+                "&paymentSystem.limitIds=" + mntPaymentSystemUnitId +
+                "&paymentSystem.accountId=" + mntPaymentSystemAccountId +
+                "&MNT_TEST_MODE=" + mntTestMode;
+
+        if (!mntAcountCode.equals("")) {
+            queryString = queryString + "&MNT_SIGNATURE=" +
+                    md5(mntAcountId + mntOrderId + mntAmountString +
+                            mntCurrency + mntTestMode + mntAcountCode);
+        }
+
+        // queryString
+        Log.e(TAG, "DBG_showPaymentFrom: " + queryString);
+
+        webView.loadUrl(queryString);
     }
 
-    public String getRandom(int min, int max) {
-        Random r = new Random();
-        int rnd = r.nextInt(max - min + 1) + min;
-        return Integer.toString(rnd);
+    /**
+     * Открывает страницу оплаты с последующей привязкой карты
+     *
+     * @param mntOrderId             Идентификатор, по которому магазин сможет понять, что это данные именно этого заказа
+     * @param mntAmount              Сумма оплаты
+     * @param mntCurrency            Валюта платежа
+     * @param mntPaymentSystem       Платежная система
+     * @param publicId               Значение из личного кабинета (Мой счет -> Безопасность -> Публичный идентификатор)
+     * @param cardNumberRequired     флаг, указывающий, что номер карты нужен на форме оплаты
+     * @param cardExpirationRequired флаг, указывающий, что срок действия карты нужен на форме  оплаты
+     * @param cardCVV2Required       флаг, указывающий, что CVV2 карты нужен на форме оплаты
+     */
+    public void showPaymentFormAndSaveCard(String mntOrderId,
+                                           Double mntAmount,
+                                           String mntCurrency,
+                                           String mntPaymentSystem,
+                                           String publicId,
+                                           boolean cardNumberRequired,
+                                           boolean cardExpirationRequired,
+                                           boolean cardCVV2Required) {
+
+        String mntPaymentSystemAccountId = sdkConfig.get(mntPaymentSystem + "_accoundId");
+        String mntPaymentSystemUnitId = sdkConfig.get(mntPaymentSystem + "_unitId");
+        String mntSCDLink = sdkConfig.get("monetasdk_secure_card_data_link");
+
+        String mntAmountString = String.format(Locale.ROOT, "%.2f", mntAmount);
+
+        String queryString = mntUrl + mntSCDLink +
+                "?MNT_ID=" + mntAcountId +
+                "&MNT_TRANSACTION_ID=" + mntOrderId +
+                "&MNT_CURRENCY_CODE=" + mntCurrency.toString() +
+                "&MNT_AMOUNT=" + mntAmountString +
+                "&followup=true&javascriptEnabled=true&payment_method=" + mntPaymentSystem +
+                "&paymentSystem.unitId=" + mntPaymentSystemUnitId +
+                "&paymentSystem.limitIds=" + mntPaymentSystemUnitId +
+                "&paymentSystem.accountId=" + mntPaymentSystemAccountId +
+                "&MNT_TEST_MODE=" + mntTestMode +
+                "&publicId=" + publicId +
+                "&secure[CARDNUMBER]=" + (cardNumberRequired ? "required" : "") +
+                "&secure[CARDEXPIRATION]=" + (cardExpirationRequired ? "required" : "") +
+                "&secure[CARDCVV2]=" + (cardCVV2Required ? "required" : "");
+
+        if (!mntAcountCode.equals("")) {
+            queryString += "&MNT_SIGNATURE=" +
+                    md5(mntAcountId + mntOrderId + mntAmountString +
+                            mntCurrency + mntTestMode + mntAcountCode);
+        }
+
+        Log.e(TAG, "DBG_showPaymentFormAndSaveCard: " + queryString);
+
+        webView.loadUrl(queryString);
     }
 
-    private static MonetaSdk ourInstance = new MonetaSdk();
-
-    public static MonetaSdk getInstance() {
-        return ourInstance;
+    /**
+     * Открывает страницу оплаты с последующей привязкой карты
+     *
+     * @param mntOrderId       Идентификатор, по которому магазин сможет понять, что это данные именно этого заказа
+     * @param mntAmount        Сумма оплаты
+     * @param mntCurrency      Валюта платежа
+     * @param mntPaymentSystem Платежная система
+     * @param publicId         Значение из личного кабинета (Мой счет -> Безопасность -> Публичный идентификатор)
+     */
+    public void showPaymentFormAndSaveCard(String mntOrderId,
+                                           Double mntAmount,
+                                           String mntCurrency,
+                                           String mntPaymentSystem,
+                                           String publicId) {
+        showPaymentFormAndSaveCard(mntOrderId, mntAmount, mntCurrency,
+                mntPaymentSystem, publicId, true, true, true);
     }
 
-    public MonetaSdk() {
+    public enum Currency {
+        RUB, EUR, USD;
     }
-
 }
